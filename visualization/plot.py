@@ -32,3 +32,26 @@ def visualize_social_network_static(G, num_infected=100, seed=42):
     plt.show()
 
     print("Visualization complete.")
+
+
+def plot_sir_timeline(timeline):
+    """
+    Plots the timeline of S, I, R over simulation days.
+    """
+
+    days = [entry["day"] for entry in timeline]
+    S = [entry["S"] for entry in timeline]
+    I = [entry["I"] for entry in timeline]
+    R = [entry["R"] for entry in timeline]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(days, S, label="Susceptible", color="green")
+    plt.plot(days, I, label="Infected", color="red")
+    plt.plot(days, R, label="Recovered", color="blue")
+    plt.xlabel("Day")
+    plt.ylabel("Number of Individuals")
+    plt.title("SIR Model Simulation Over Time")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
