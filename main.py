@@ -1,6 +1,6 @@
 # main.py
 from network.generate_network import generate_social_network, save_network
-from visualization.plot import visualize_social_network_static, plot_sir_timeline
+from visualization.plot import visualize_social_network_static, plot_sir_timeline, animate_infection_spread
 from simulation.sir_model import initialize_infection, simulate_sir
 
 def main():
@@ -15,7 +15,7 @@ def main():
     status, infection_day, infected_nodes = initialize_infection(G, percent_infected=0.01)
 
     # Step 4: Simulate infection over time (SIR model)
-    timeline = simulate_sir(
+    timeline,status_history = simulate_sir(
         G, 
         status, 
         infection_day, 
@@ -26,6 +26,7 @@ def main():
 
     # Step 5: Plot the S, I, R trends
     plot_sir_timeline(timeline)
+    animate_infection_spread(G, status_history)
 
 if __name__ == "__main__":
     main()

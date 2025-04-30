@@ -12,6 +12,7 @@ def initialize_infection(G, percent_infected=0.01):
 
 def simulate_sir(G, status, infection_day, max_days=100, infection_prob=0.05, recovery_time=14):
     timeline = []
+    status_history = []
     current_day = 0
     active_infected = set(infection_day.keys())
 
@@ -40,6 +41,10 @@ def simulate_sir(G, status, infection_day, max_days=100, infection_prob=0.05, re
             "R"    : sum(1 for s in status.values() if s == "R"),
         }
         timeline.append(counts)
+        status_snapshot = status.copy()  
+        status_history.append(status_snapshot)
         current_day += 1
 
-    return timeline
+
+    return timeline, status_history
+
