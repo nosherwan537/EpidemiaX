@@ -3,10 +3,11 @@ import networkx as nx
 from network.generate_network import generate_social_network
 from simulation.sihrd_model import initialize_population, simulate_sihrd, Status
 from visualization.enhanced_plot import (
-    create_network_plot,
     plot_sihrd_timeline,
     create_age_distribution_plot,
-    animate_spread
+    animate_spread,
+    create_static_network,
+    animate_sihrd_timeline
 )
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
@@ -28,114 +29,236 @@ theme = st.sidebar.selectbox("Select Theme", ["Day", "Night"])
 if theme == "Day":
     st.markdown("""
         <style>
-            html, body, .stApp {
-                height: 100%;
-                background: #f0f4f8;
-                font-family: 'Arial', sans-serif;
-                color: #333;
+            /* Main container styling */
+            .stApp {
+                background: #ffffff;
             }
-            .stSidebar, .stSidebar * {
-                background-color: #ffffff;
-                color: #333;
-            }
+            
+            /* Title and headers */
             .custom-title {
-                font-size: 3rem;
-                font-weight: bold;
-                color: #4b0082;
-                margin-bottom: 10px;
+                font-size: 2.5rem;
+                font-weight: 700;
+                color: #1f77b4;
+                margin-bottom: 1.5rem;
+                text-align: center;
+                font-family: 'Helvetica Neue', sans-serif;
             }
+            
+            /* Subheaders */
             .custom-subheader {
+                color: #2c3e50;
                 font-size: 1.5rem;
-                color: #4b0082;
-                font-weight: bold;
-                margin-top: 30px;
+                font-weight: 600;
+                margin: 1.5rem 0 1rem 0;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid #eee;
             }
-            .custom-button {
-                background-color: #4b0082;
-                color: white;
-                font-weight: bold;
-                padding: 10px 30px;
-                border: none;
-                border-radius: 8px;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            
+            /* Metrics styling */
+            .stMetric {
+                background: #f8f9fa;
+                padding: 1rem;
+                border-radius: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
-            .custom-button:hover {
-                background-color: #6a0dad;
+            
+            /* Tab styling */
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 8px;
+                background-color: #f8f9fa;
+                padding: 0.5rem;
+                border-radius: 6px;
             }
+            
+            .stTabs [data-baseweb="tab"] {
+                height: 50px;
+                padding: 0 16px;
+                background-color: white;
+                border-radius: 6px;
+                color: #2c3e50;
+                font-weight: 500;
+                border: 1px solid #eee;
+            }
+            
+            .stTabs [aria-selected="true"] {
+                background-color: #1f77b4 !important;
+                color: white !important;
+            }
+            
+            /* Plot container styling */
+            [data-testid="stPlotlyChart"], [data-testid="stImage"] {
+                background: white;
+                padding: 1rem;
+                border-radius: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                margin: 1rem 0;
+            }
+            
+            /* Info boxes */
+            .stInfo {
+                background-color: #f8f9fa;
+                padding: 1rem;
+                border-radius: 6px;
+                border-left: 4px solid #1f77b4;
+            }
+            
+            /* Success message styling */
+            .stSuccess {
+                background-color: #d4edda;
+                border-left: 4px solid #28a745;
+            }
+            
+            /* Footer styling */
             footer {
-                margin-top: 50px;
-                padding-top: 10px;
+                margin-top: 3rem;
+                padding: 1.5rem 0;
                 text-align: center;
                 font-size: 0.9rem;
-                color: #888;
+                color: #666;
+                border-top: 1px solid #eee;
             }
         </style>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
         <style>
-            html, body, .stApp {
-                height: 100%;
-                background: #121212;
-                font-family: 'Arial', sans-serif;
-                color: #e0e0e0;
+            /* Main container styling */
+            .stApp {
+                background: #1a1a1a;
             }
-            .stSidebar, .stSidebar * {
-                background-color: #333333;
-                color: #e0e0e0;
-            }
+            
+            /* Title and headers */
             .custom-title {
-                font-size: 3rem;
-                font-weight: bold;
-                color: #e0e0e0;
-                margin-bottom: 10px;
+                font-size: 2.5rem;
+                font-weight: 700;
+                color: #3498db;
+                margin-bottom: 1.5rem;
+                text-align: center;
+                font-family: 'Helvetica Neue', sans-serif;
             }
+            
+            /* Subheaders */
             .custom-subheader {
-                font-size: 1.5rem;
                 color: #e0e0e0;
-                font-weight: bold;
-                margin-top: 30px;
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin: 1.5rem 0 1rem 0;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid #333;
             }
-            .custom-button {
-                background-color: #6200ea;
-                color: white;  /* Default text color for button */
-                font-weight: bold;
-                padding: 10px 30px;
-                border: none;
-                border-radius: 8px;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            
+            /* Metrics styling */
+            .stMetric {
+                background: #2d2d2d;
+                padding: 1rem;
+                border-radius: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                color: #e0e0e0;
             }
-            .custom-button:hover {
-                background-color: #3700b3;
+            
+            /* Tab styling */
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 8px;
+                background-color: #2d2d2d;
+                padding: 0.5rem;
+                border-radius: 6px;
             }
-            /* Apply red color to Run Simulation button in Night mode */
-            .night-mode .stButton button {
-                color: red;  /* Change button text color to red in Night mode */
+            
+            .stTabs [data-baseweb="tab"] {
+                height: 50px;
+                padding: 0 16px;
+                background-color: #333;
+                border-radius: 6px;
+                color: #e0e0e0;
+                font-weight: 500;
+                border: 1px solid #444;
             }
+            
+            .stTabs [aria-selected="true"] {
+                background-color: #3498db !important;
+                color: white !important;
+            }
+            
+            /* Plot container styling */
+            [data-testid="stPlotlyChart"], [data-testid="stImage"] {
+                background: #2d2d2d;
+                padding: 1rem;
+                border-radius: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                margin: 1rem 0;
+            }
+            
+            /* Info boxes */
+            .stInfo {
+                background-color: #2d2d2d;
+                padding: 1rem;
+                border-radius: 6px;
+                border-left: 4px solid #3498db;
+                color: #e0e0e0;
+            }
+            
+            /* Success message styling */
+            .stSuccess {
+                background-color: #2d3748;
+                border-left: 4px solid #28a745;
+                color: #e0e0e0;
+            }
+            
+            /* Footer styling */
             footer {
-                margin-top: 50px;
-                padding-top: 10px;
+                margin-top: 3rem;
+                padding: 1.5rem 0;
                 text-align: center;
                 font-size: 0.9rem;
-                color: #bbb;
+                color: #888;
+                border-top: 1px solid #333;
+            }
+            
+            /* Text color for dark theme */
+            .stMarkdown, .stText {
+                color: #e0e0e0;
             }
         </style>
     """, unsafe_allow_html=True)
 
-
 # Header
-st.markdown('<h1 class="custom-title">📊 EpidemiaX - Advanced Disease Spread Simulator</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="custom-title">🦠 EpidemiaX - Disease Spread Simulator</h1>', unsafe_allow_html=True)
 
-st.title("EpidemiaX - Advanced Disease Spread Simulator")
+# Introduction with better formatting
 st.markdown("""
-This application simulates the spread of an infectious disease through a population,
-taking into account factors such as:
-- Age-based risk factors
-- Vaccination status
-- Proximity-based transmission
-- Hospitalization capacity
-- Mortality rates
-""")
+<div style='padding: 1.5rem; background: {}; border-radius: 6px; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>
+    <h3 style='color: {}; margin-bottom: 1rem;'>About the Simulator</h3>
+    <p style='font-size: 1.1rem; line-height: 1.6; color: {};'>
+        This application simulates the spread of an infectious disease through a population, considering multiple factors:
+    </p>
+    <ul style='list-style-type: none; padding-left: 0; margin-top: 1rem;'>
+        <li style='margin: 0.5rem 0; color: {}; display: flex; align-items: center;'>
+            <span style='margin-right: 10px;'>🎯</span> Age-based risk factors
+        </li>
+        <li style='margin: 0.5rem 0; color: {}; display: flex; align-items: center;'>
+            <span style='margin-right: 10px;'>💉</span> Vaccination status
+        </li>
+        <li style='margin: 0.5rem 0; color: {}; display: flex; align-items: center;'>
+            <span style='margin-right: 10px;'>🤝</span> Proximity-based transmission
+        </li>
+        <li style='margin: 0.5rem 0; color: {}; display: flex; align-items: center;'>
+            <span style='margin-right: 10px;'>🏥</span> Hospitalization capacity
+        </li>
+        <li style='margin: 0.5rem 0; color: {}; display: flex; align-items: center;'>
+            <span style='margin-right: 10px;'>📊</span> Mortality rates
+        </li>
+    </ul>
+</div>
+""".format(
+    '#f8f9fa' if theme == "Day" else '#2d2d2d',
+    '#2c3e50' if theme == "Day" else '#e0e0e0',
+    '#2c3e50' if theme == "Day" else '#e0e0e0',
+    '#2c3e50' if theme == "Day" else '#e0e0e0',
+    '#2c3e50' if theme == "Day" else '#e0e0e0',
+    '#2c3e50' if theme == "Day" else '#e0e0e0',
+    '#2c3e50' if theme == "Day" else '#e0e0e0',
+    '#2c3e50' if theme == "Day" else '#e0e0e0'
+), unsafe_allow_html=True)
 
 # Sidebar for parameters
 st.sidebar.header("Simulation Parameters")
@@ -184,29 +307,41 @@ if st.sidebar.button("Run Simulation"):
             G, status, infection_day, hospitalization_day, params
         )
     
-    # Display results in tabs
+    # Create tabs
     tab1, tab2, tab3 = st.tabs(["Disease Spread", "Demographics", "Network View"])
     
+    # Display all static content first
     with tab1:
-        st.subheader("Disease Spread Over Time")
+        st.markdown('<h2 class="custom-subheader">Disease Spread Over Time</h2>', unsafe_allow_html=True)
+        
+        # Static timeline with enhanced container
+        st.markdown('<div class="custom-subheader">Static Timeline</div>', unsafe_allow_html=True)
         fig = plot_sihrd_timeline(timeline)
         st.plotly_chart(fig, use_container_width=True)
         
-        # Key metrics
+        # Calculate key metrics
         final_stats = {
-            'Total Infected': sum(timeline['infected']),
+            'Total Infected': timeline['infected'][-1] + timeline['hospitalized'][-1] + timeline['recovered'][-1] + timeline['deceased'][-1],
             'Peak Hospitalized': max(timeline['hospitalized']),
             'Total Deceased': timeline['deceased'][-1],
             'Recovery Rate': (timeline['recovered'][-1] / 
-                            (timeline['recovered'][-1] + timeline['deceased'][-1]) * 100)
+                            (timeline['recovered'][-1] + timeline['deceased'][-1]) * 100 if (timeline['recovered'][-1] + timeline['deceased'][-1]) > 0 else 0)
         }
         
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Total Infected", f"{final_stats['Total Infected']:,}")
-        col2.metric("Peak Hospitalized", f"{final_stats['Peak Hospitalized']:,}")
-        col3.metric("Total Deceased", f"{final_stats['Total Deceased']:,}")
-        col4.metric("Recovery Rate", f"{final_stats['Recovery Rate']:.1f}%")
-    
+        # Key metrics with enhanced styling
+        st.markdown('<div class="custom-subheader">Key Metrics</div>', unsafe_allow_html=True)
+        metrics_container = st.container()
+        with metrics_container:
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Infected", f"{final_stats['Total Infected']:,}")
+            with col2:
+                st.metric("Peak Hospitalized", f"{final_stats['Peak Hospitalized']:,}")
+            with col3:
+                st.metric("Total Deceased", f"{final_stats['Total Deceased']:,}")
+            with col4:
+                st.metric("Recovery Rate", f"{final_stats['Recovery Rate']:.1f}%")
+
     with tab2:
         st.subheader("Demographic Analysis")
         demo_fig = create_age_distribution_plot(G, status)
@@ -214,39 +349,93 @@ if st.sidebar.button("Run Simulation"):
     
     with tab3:
         st.subheader("Network Visualization")
-        col1, col2 = st.columns([2, 1])
         
-        with col1:
-            # Create network visualization
-            network_fig = create_network_plot(G, status, "Current Network State")
-            st.pyplot(network_fig)
+        # Static network structure
+        st.markdown("### Network Structure")
+        static_fig = create_static_network(G)
+        st.pyplot(static_fig)
+
+    # Now handle dynamic content generation
+    with tab1:
+        st.markdown("### Dynamic Timeline")
+        timeline_progress = st.progress(0)
+        st.markdown("Generating timeline animation...")
         
-        with col2:
-            st.markdown("""
-            ### Network Statistics
-            - **Nodes:** {}
-            - **Edges:** {}
-            - **Average Degree:** {:.2f}
-            - **Network Density:** {:.3f}
-            """.format(
-                G.number_of_nodes(),
-                G.number_of_edges(),
-                sum(dict(G.degree()).values()) / G.number_of_nodes(),
-                nx.density(G)
-            ))
+        # Generate timeline animation
+        anim = animate_sihrd_timeline(timeline)
+        
+        # Save animation to temporary file
+        with tempfile.NamedTemporaryFile(suffix='.gif', delete=False) as temp_file:
+            writer = PillowWriter(fps=10, bitrate=1500)
+            anim.save(
+                temp_file.name,
+                writer=writer,
+                dpi=80,
+                savefig_kwargs={
+                    'facecolor': 'white',
+                    'bbox_inches': None,
+                    'pad_inches': 0
+                }
+            )
             
-            # Add animation
-            st.markdown("### Animation of Disease Spread")
-            anim = animate_spread(G, status_history)
+            timeline_progress.progress(100)
+            st.success("Timeline animation generated successfully!")
             
-            # Save animation to temporary file
-            with tempfile.NamedTemporaryFile(suffix='.gif', delete=False) as temp_file:
-                anim.save(temp_file.name, writer=PillowWriter(fps=5))
-                st.image(temp_file.name)
-            os.unlink(temp_file.name)  # Clean up temp file
+            # Create columns for centered display
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                st.image(temp_file.name, use_container_width=True)
+        
+        plt.close('all')
+        os.unlink(temp_file.name)
+
+    with tab3:
+        st.markdown("### Disease Spread Animation")
+        network_progress = st.progress(0)
+        st.markdown("Generating network animation...")
+        
+        # Generate network animation
+        anim = animate_spread(G, status_history)
+        
+        # Save animation to temporary file
+        with tempfile.NamedTemporaryFile(suffix='.gif', delete=False) as temp_file:
+            writer = PillowWriter(
+                fps=5,
+                bitrate=1500
+            )
+            
+            anim.save(
+                temp_file.name,
+                writer=writer,
+                dpi=80,
+                savefig_kwargs={
+                    'facecolor': 'white',
+                    'bbox_inches': None,
+                    'pad_inches': 0
+                }
+            )
+            
+            network_progress.progress(100)
+            st.success("Network animation generated successfully!")
+            
+            # Create columns for centered display
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                st.image(temp_file.name, use_container_width=True)
+        
+        plt.close('all')
+        os.unlink(temp_file.name)
 
 else:
     st.info("Adjust the parameters in the sidebar and click 'Run Simulation' to start.")
 
-# Footer
-st.markdown('<footer>© 2025 EpidemiaX Team. All rights reserved.</footer>', unsafe_allow_html=True)
+# Enhanced footer
+st.markdown("""
+<footer>
+    <div style='display: flex; justify-content: center; align-items: center; gap: 2rem;'>
+        <span>© 2025 EpidemiaX Team</span>
+        <span>|</span>
+        <span>Disease Spread Simulator</span>
+    </div>
+</footer>
+""", unsafe_allow_html=True)
