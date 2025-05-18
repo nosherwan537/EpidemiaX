@@ -1,0 +1,137 @@
+\documentclass{beamer}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{caption}
+
+% Theme Configuration
+\usetheme{Madrid}
+\usecolortheme{whale}
+\setbeamertemplate{navigation symbols}{} % Removes navigation symbols
+\setbeamertemplate{caption}[numbered]
+
+% Title Information
+\title[EpidemiaX]{EpidemiaX: Disease Spread Simulation Analysis}
+\author[M. Sohaib Akhtar, N. Tahir]{%
+    Muhammad Sohaib Akhtar \\ \small CMS ID: 456318 \\
+    Nosherwan Tahir \\ \small CMS ID: 456122
+}
+\date{\today}
+
+\begin{document}
+
+% Title Slide
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% Outline
+\begin{frame}{Presentation Outline}
+    \tableofcontents
+\end{frame}
+
+% Approach Summary Section
+\section{Approach Summary}
+\begin{frame}{Our Simulation Approach}
+    \begin{itemize}
+        \item Developed a simulation model for tracking infectious disease spread
+        \item Implemented key epidemiological parameters:
+        \begin{itemize}
+            \item Population density
+            \item Transmission and recovery rates
+            \item Social distancing metrics
+        \end{itemize}
+        \item Employed algorithmic contact tracing mechanisms
+        \item Integrated real-world demographic datasets
+    \end{itemize}
+\end{frame}
+
+% Visualizations Section
+\section{Visualizations}
+\begin{frame}{Simulation Visualizations Overview}
+    \begin{itemize}
+        \item Disease Spread Heat Maps
+        \item Infection Rate Evolution Curves
+        \item Population Movement Tracking
+        \item Recovery Progress Timelines
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{SIR Model Visualization}
+    \centering
+    \includegraphics[width=0.85\linewidth]{SIR.jpg}
+    \captionof{figure}{SIR Model: Susceptible-Infected-Recovered Dynamics}
+\end{frame}
+
+\begin{frame}{Age-Based Infection Distribution}
+    \centering
+    \includegraphics[width=0.85\linewidth]{Age distribution.jpg}
+    \captionof{figure}{Age-wise Distribution of Infected Individuals}
+\end{frame}
+
+\begin{frame}{Vaccination Status Analysis}
+    \centering
+    \includegraphics[width=0.85\linewidth]{Vaccination Status.jpg}
+    \captionof{figure}{Vaccination Coverage and Its Impact on Spread}
+\end{frame}
+
+\begin{frame}{Infection Rate Over Time}
+    \centering
+    \includegraphics[width=0.85\linewidth]{Infection rate.jpg}
+    \captionof{figure}{Daily Infection Rate Trends During Simulation}
+\end{frame}
+
+\begin{frame}{Risk Factor Heatmap}
+    \centering
+    \includegraphics[width=0.85\linewidth]{Risk Factor.jpg}
+    \captionof{figure}{Geographical Risk Factors and Spread Potential}
+\end{frame}
+
+\begin{frame}{Network Graph of Spread}
+    \centering
+    \includegraphics[width=0.85\linewidth]{Network Graph.jpg}
+    \captionof{figure}{Graph-based Representation of Transmission Chains}
+\end{frame}
+
+% Key Findings Section
+\section{Key Findings}
+\begin{frame}{Notable Observations}
+    \textbf{1. Pattern Discovery}
+    \begin{itemize}
+        \item Hotspot emergence in densely populated regions
+        \item Strong correlation between mobility and spread velocity
+    \end{itemize}
+    \vspace{0.5em}
+    \textbf{2. Effectiveness of Interventions}
+    \begin{itemize}
+        \item Early lockdowns slowed down the infection curve
+        \item Social distancing significantly reduced contact rate
+    \end{itemize}
+    \vspace{0.5em}
+    \textbf{3. Critical Risk Factors}
+    \begin{itemize}
+        \item Inequitable healthcare resource allocation
+        \item Influx of individuals from high-risk zones
+    \end{itemize}
+\end{frame}
+
+% Conclusion Section
+\section{Conclusion}
+\begin{frame}{Conclusion}
+    \begin{itemize}
+        \item Successfully modeled realistic disease spread using simulation
+        \item Identified actionable points for timely intervention
+        \item Validated the power of non-pharmaceutical measures
+        \item Established a data-driven foundation for future pandemic strategies
+    \end{itemize}
+\end{frame}
+
+% Questions Slide
+\begin{frame}
+    \centering
+    \Huge \textbf{Thank You!} \\
+    \vspace{1em}
+    \Large We welcome your questions and feedback.
+\end{frame}
+
+\end{document}
