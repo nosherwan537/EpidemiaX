@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter
 import tempfile
 import os
+import random
+import numpy as np
 
 # Page configuration
 st.set_page_config(
@@ -266,7 +268,7 @@ st.sidebar.header("Simulation Parameters")
 # Network parameters
 st.sidebar.subheader("Network Parameters")
 population_size = st.sidebar.slider("Population Size", 100, 1000, 500)
-avg_connections = st.sidebar.slider("Average Connections per Person", 2, 20, 10)
+avg_connections = st.sidebar.slider("Average Connections per Person", 2, 20, 5)
 
 # Disease parameters
 st.sidebar.subheader("Disease Parameters")
@@ -280,19 +282,87 @@ st.sidebar.subheader("Healthcare System Parameters")
 hospitalization_prob = st.sidebar.slider("Base Hospitalization Probability", 0.05, 0.30, 0.15)
 death_prob = st.sidebar.slider("Base Death Probability", 0.01, 0.10, 0.02)
 
-# Run simulation button
-if st.sidebar.button("Run Simulation"):
-    # Generate network
-    with st.spinner("Generating social network..."):
-        G = generate_social_network(num_nodes=population_size, edges_per_node=avg_connections)
-        
+# Modify the caching implementation
+@st.cache_data
+def generate_network_cached(num_nodes, edges_per_node):
+    """Cached version of network generation"""
+    G = generate_social_network(num_nodes=num_nodes, edges_per_node=edges_per_node)
+    # Initialize node attributes here to ensure they're preserved in cache
+    for node in G.nodes():
+        # Assign random age (0-100)
+        G.nodes[node]['age'] = random.randint(0, 100)
+        # Assign random vaccination status (0-1)
+        G.nodes[node]['vaccinated'] = random.random() < 0.7  # 70% vaccination rate
+        # Calculate base risk factor based on age
+        age = G.nodes[node]['age']
+        G.nodes[node]['risk_factor'] = calculate_risk_factor(age, G.nodes[node]['vaccinated'])
+    return G
+
+@st.cache_data(hash_funcs={nx.Graph: lambda _: None})
+def run_simulation_with_init(_G, percent_infected, params):
+    """Cached version of simulation run that includes initialization"""
     # Initialize population
-    with st.spinner("Initializing population..."):
-        status, infection_day, hospitalization_day, infected_nodes = initialize_population(
-            G, percent_infected=initial_infected/100
+    status, infection_day, hospitalization_day, infected_nodes = initialize_population(
+        _G, 
+        percent_infected=percent_infected,
+        preserve_attributes=True  # Add this flag
+    )
+    
+    # Run simulation
+    timeline, status_history = simulate_sihrd(
+        _G, 
+        status, 
+        infection_day, 
+        hospitalization_day, 
+        params
+    )
+    
+    return timeline, status_history, status
+
+def calculate_risk_factor(age, vaccinated):
+    """Calculate risk factor based on age and vaccination status."""
+    base_risk = np.interp(age, [0, 50, 70, 85, 100], [0.1, 0.2, 0.4, 0.7, 1.0])
+    return base_risk * (0.3 if vaccinated else 1.0)
+
+def save_animation(anim, filename, fps=5):
+    """Optimized animation saving function with error handling"""
+    try:
+        # Create writer with explicit metadata
+        metadata = dict(title='Disease Spread Animation', artist='EpidemiaX')
+        writer = PillowWriter(
+            fps=fps,
+            metadata=metadata,
+            bitrate=800
         )
         
-    # Run simulation
+        # Save with explicit format
+        anim.save(
+            filename,
+            writer=writer,
+            dpi=60,
+            savefig_kwargs={
+                'facecolor': 'white',
+                'bbox_inches': 'tight',
+                'pad_inches': 0.1
+            }
+        )
+        
+        # Verify the file was created and is readable
+        if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+            return False
+            
+        return True
+    except Exception as e:
+        print(f"Error saving animation: {str(e)}")
+        return False
+
+# Replace the simulation section
+if st.sidebar.button("Run Simulation"):
+    # Generate network with caching
+    with st.spinner("Generating social network..."):
+        G = generate_network_cached(num_nodes=population_size, edges_per_node=avg_connections)
+        
+    # Run simulation with caching (combined initialization and simulation)
     with st.spinner("Running simulation..."):
         params = {
             'max_days': 100,
@@ -303,8 +373,10 @@ if st.sidebar.button("Run Simulation"):
             'hospital_recovery_time': hospital_recovery_time
         }
         
-        timeline, status_history = simulate_sihrd(
-            G, status, infection_day, hospitalization_day, params
+        timeline, status_history, status = run_simulation_with_init(
+            G,
+            initial_infected/100,
+            params
         )
     
     # Create tabs
@@ -364,24 +436,13 @@ if st.sidebar.button("Run Simulation"):
         # Generate timeline animation
         anim = animate_sihrd_timeline(timeline)
         
-        # Save animation to temporary file
+        # Save animation with optimized settings
         with tempfile.NamedTemporaryFile(suffix='.gif', delete=False) as temp_file:
-            writer = PillowWriter(fps=10, bitrate=1500)
-            anim.save(
-                temp_file.name,
-                writer=writer,
-                dpi=80,
-                savefig_kwargs={
-                    'facecolor': 'white',
-                    'bbox_inches': None,
-                    'pad_inches': 0
-                }
-            )
+            save_animation(anim, temp_file.name, fps=5)
             
             timeline_progress.progress(100)
             st.success("Timeline animation generated successfully!")
             
-            # Create columns for centered display
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
                 st.image(temp_file.name, use_container_width=True)
@@ -394,37 +455,49 @@ if st.sidebar.button("Run Simulation"):
         network_progress = st.progress(0)
         st.markdown("Generating network animation...")
         
-        # Generate network animation
-        anim = animate_spread(G, status_history)
+        temp_dir = tempfile.mkdtemp()
+        temp_path = os.path.join(temp_dir, 'animation.gif')
         
-        # Save animation to temporary file
-        with tempfile.NamedTemporaryFile(suffix='.gif', delete=False) as temp_file:
-            writer = PillowWriter(
-                fps=5,
-                bitrate=1500
-            )
+        try:
+            # Generate network animation
+            anim = animate_spread(G, status_history)
             
-            anim.save(
-                temp_file.name,
-                writer=writer,
-                dpi=80,
-                savefig_kwargs={
-                    'facecolor': 'white',
-                    'bbox_inches': None,
-                    'pad_inches': 0
-                }
-            )
-            
-            network_progress.progress(100)
-            st.success("Network animation generated successfully!")
-            
-            # Create columns for centered display
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                st.image(temp_file.name, use_container_width=True)
-        
-        plt.close('all')
-        os.unlink(temp_file.name)
+            # Save animation
+            network_progress.progress(50)
+            if save_animation(anim, temp_path, fps=3):
+                network_progress.progress(100)
+                
+                # Verify file exists and has content
+                if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
+                    try:
+                        # Read the file content as bytes
+                        with open(temp_path, 'rb') as f:
+                            file_content = f.read()
+                            
+                        st.success("Network animation generated successfully!")
+                        col1, col2, col3 = st.columns([1, 2, 1])
+                        with col2:
+                            st.image(file_content, use_container_width=True, caption="Disease Spread Animation")
+                    except Exception as e:
+                        st.error(f"Error displaying animation: {str(e)}")
+                else:
+                    st.error("Animation file was not created successfully.")
+            else:
+                st.error("Failed to save the animation. Please try again with different parameters.")
+                
+        except ValueError as ve:
+            st.error(f"Error generating animation: {str(ve)}")
+        except Exception as e:
+            st.error(f"Unexpected error during animation: {str(e)}")
+        finally:
+            plt.close('all')  # Ensure all plots are closed
+            # Clean up temporary files
+            try:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                os.rmdir(temp_dir)
+            except Exception:
+                pass  # Ignore cleanup errors
 
 else:
     st.info("Adjust the parameters in the sidebar and click 'Run Simulation' to start.")

@@ -10,7 +10,7 @@ class Status(Enum):
     RECOVERED = 3
     DECEASED = 4
 
-def initialize_population(G, percent_infected=0.01):
+def initialize_population(G, percent_infected=0.01, preserve_attributes=False):
     """Initialize the population with various attributes."""
     status = {}
     infection_day = {}
@@ -18,13 +18,14 @@ def initialize_population(G, percent_infected=0.01):
     
     # Initialize node attributes
     for node in G.nodes():
-        # Assign random age (0-100)
-        G.nodes[node]['age'] = random.randint(0, 100)
-        # Assign random vaccination status (0-1)
-        G.nodes[node]['vaccinated'] = random.random() < 0.7  # 70% vaccination rate
-        # Calculate base risk factor based on age
-        age = G.nodes[node]['age']
-        G.nodes[node]['risk_factor'] = calculate_risk_factor(age, G.nodes[node]['vaccinated'])
+        if not preserve_attributes:
+            # Assign random age (0-100)
+            G.nodes[node]['age'] = random.randint(0, 100)
+            # Assign random vaccination status (0-1)
+            G.nodes[node]['vaccinated'] = random.random() < 0.7  # 70% vaccination rate
+            # Calculate base risk factor based on age
+            age = G.nodes[node]['age']
+            G.nodes[node]['risk_factor'] = calculate_risk_factor(age, G.nodes[node]['vaccinated'])
         
         status[node] = Status.SUSCEPTIBLE
         infection_day[node] = -1

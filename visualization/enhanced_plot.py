@@ -25,49 +25,49 @@ def animate_sihrd_timeline(timeline):
     # Get max value for y-axis scaling
     max_value = max(max(timeline[status]) for status in colors.keys())
     
-    # Create x-axis data
-    days = list(range(len(timeline['susceptible'])))
+    # Create x-axis data - reduce frames by taking every 2nd day
+    days = list(range(0, len(timeline['susceptible']), 2))
+    lines = {}
+    
+    # Initialize empty lines
+    for status in colors.keys():
+        line, = plt.plot([], [], color=colors[status], label=status.capitalize(), linewidth=2)
+        lines[status] = line
+    
+    # Set consistent axis limits
+    plt.xlim(0, len(timeline['susceptible']))
+    plt.ylim(0, max_value * 1.1)
+    
+    # Add labels and title
+    plt.xlabel('Days', fontsize=10)
+    plt.ylabel('Number of Individuals', fontsize=10)
+    plt.title('Population Status Over Time', pad=10, fontsize=12)
+    
+    # Add legend
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=10)
+    
+    # Grid and styling
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
     
     def update(frame):
-        plt.clf()
-        ax = plt.gca()
-        
-        # Plot each status up to the current frame
-        for status, color in colors.items():
-            plt.plot(
-                days[:frame+1],
-                timeline[status][:frame+1],
-                color=color,
-                label=status.capitalize(),
-                linewidth=2
+        real_frame = frame * 2  # Account for frame skipping
+        # Update line data
+        for status, line in lines.items():
+            line.set_data(
+                range(real_frame + 1),
+                timeline[status][:real_frame + 1]
             )
-        
-        # Set consistent axis limits
-        plt.xlim(0, len(days))
-        plt.ylim(0, max_value * 1.1)
-        
-        # Add labels and title
-        plt.xlabel('Days', fontsize=10)
-        plt.ylabel('Number of Individuals', fontsize=10)
-        plt.title(f'Population Status Over Time - Day {frame}', pad=10, fontsize=12)
-        
-        # Add legend
-        plt.legend(
-            loc='center left',
-            bbox_to_anchor=(1, 0.5),
-            fontsize=10
-        )
-        
-        # Grid and styling
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
+        plt.title(f'Population Status Over Time - Day {real_frame}', pad=10, fontsize=12)
+        return list(lines.values())
     
-    # Create animation
+    # Create animation with optimized parameters
     anim = animation.FuncAnimation(
         fig,
         update,
         frames=len(days),
-        interval=100,
+        interval=200,  # Increased interval for smoother playback
+        blit=True,  # Enable blit for better performance
         repeat=True
     )
     
@@ -225,17 +225,16 @@ def create_static_network(G):
 
 def animate_spread(G, status_history):
     """Create an animated visualization of the disease spread."""
-    # Reduced figure size
-    fig = plt.figure(figsize=(10, 8), dpi=80)
+    # Validate input
+    if not status_history or len(status_history) == 0:
+        raise ValueError("No status history data provided for animation")
+
+    # Further reduced figure size and DPI for better performance
+    plt.ioff()  # Turn off interactive mode
+    fig = plt.figure(figsize=(8, 6), dpi=60)
     
-    # Improved spring layout parameters
-    pos = nx.spring_layout(
-        G,
-        k=1.2,
-        iterations=100,
-        seed=42,
-        scale=2.5  # Reduced scale
-    )
+    # Calculate layout with fewer iterations for speed
+    pos = nx.spring_layout(G, k=1.2, iterations=30, seed=42, scale=2.0)
     
     # Updated color scheme
     colors = {
@@ -246,78 +245,101 @@ def animate_spread(G, status_history):
         Status.DECEASED: '#000000'      # Black
     }
     
-    # Pre-calculate frame data
+    # Pre-calculate frame data with more aggressive frame skipping
     frame_data = []
+    step = 4  # Skip every 4 frames
     
-    # Pre-calculate node positions and colors for each frame
-    for frame, current_status in enumerate(status_history):
+    # Ensure we always have at least 10 frames for smooth animation
+    if len(status_history) < 40:  # If less than 40 frames, adjust step size
+        step = max(1, len(status_history) // 10)
+    
+    for frame_idx in range(0, len(status_history), step):
+        current_status = status_history[frame_idx]
         frame_nodes = {s: [] for s in Status}
         for node, node_status in current_status.items():
             frame_nodes[node_status].append(node)
         frame_data.append(frame_nodes)
     
-    # Set fixed bounds for consistent view
-    margin = 0.3  # Reduced margin
+    # Ensure we have at least one frame
+    if not frame_data:
+        plt.close(fig)
+        raise ValueError("No frames generated for animation")
+    
+    # Set fixed bounds with smaller margin
+    margin = 0.2
     x_values = [x for x, _ in pos.values()]
     y_values = [y for _, y in pos.values()]
     x_min, x_max = min(x_values), max(x_values)
     y_min, y_max = min(y_values), max(y_values)
-    plt.xlim(x_min - margin, x_max + margin)
-    plt.ylim(y_min - margin, y_max + margin)
+    
+    # Create static elements
+    ax = plt.gca()
+    ax.set_xlim(x_min - margin, x_max + margin)
+    ax.set_ylim(y_min - margin, y_max + margin)
+    
+    # Draw edges once with reduced alpha and width
+    edge_collection = nx.draw_networkx_edges(
+        G, pos,
+        alpha=0.1,
+        width=0.1,
+        edge_color='gray'
+    )
+    
+    # Initialize node collections with smaller nodes
+    node_collections = {}
+    for s in Status:
+        node_collections[s] = ax.scatter([], [], c=colors[s], s=20, label=s.name)
+    
+    def init():
+        """Initialize animation"""
+        for collection in node_collections.values():
+            collection.set_offsets(np.empty((0, 2)))
+        return list(node_collections.values())
     
     def update(frame):
-        plt.clf()
-        ax = plt.gca()
-        
-        # Set consistent bounds
-        ax.set_xlim(x_min - margin, x_max + margin)
-        ax.set_ylim(y_min - margin, y_max + margin)
-        
-        # Draw edges
-        nx.draw_networkx_edges(
-            G, pos,
-            alpha=0.2,
-            width=0.2,
-            edge_color='gray'
-        )
-        
-        # Draw nodes for each status
-        for s in Status:
-            nodes = frame_data[frame][s]
-            if nodes:
-                nx.draw_networkx_nodes(
-                    G, pos,
-                    nodelist=nodes,
-                    node_color=colors[s],
-                    node_size=30,  # Smaller nodes
-                    alpha=1.0,
-                    label=s.name,
-                    edgecolors='white',
-                    linewidths=0.3
-                )
-        
-        plt.title(f"Disease Spread - Day {frame}", pad=15, fontsize=12)
-        legend = plt.legend(
-            bbox_to_anchor=(1.02, 1),
-            loc='upper left',
-            borderaxespad=0,
-            frameon=True,
-            fancybox=True,
-            shadow=True,
-            fontsize=10  # Smaller font
-        )
-        
-        # Ensure proper spacing
-        plt.tight_layout()
-        plt.subplots_adjust(right=0.85)
-        ax.axis('off')
+        """Update animation frame"""
+        try:
+            # Update node positions for each status
+            for s in Status:
+                nodes = frame_data[frame][s]
+                if nodes:
+                    node_pos = np.array([pos[node] for node in nodes])
+                    node_collections[s].set_offsets(node_pos)
+                else:
+                    node_collections[s].set_offsets(np.empty((0, 2)))
+            
+            ax.set_title(f"Disease Spread - Day {frame * step}", pad=10, fontsize=10)
+            return list(node_collections.values())
+        except Exception as e:
+            print(f"Error in update function: {str(e)}")
+            return init()
     
-    # Animation settings optimized for GIF
+    plt.title("Disease Spread", pad=10, fontsize=10)
+    plt.legend(
+        bbox_to_anchor=(1.01, 1),
+        loc='upper left',
+        borderaxespad=0,
+        frameon=True,
+        fancybox=False,
+        shadow=False,
+        fontsize=8
+    )
+    
+    # Ensure proper spacing with reduced margins
+    plt.tight_layout(pad=1.0)
+    plt.subplots_adjust(right=0.85)
+    ax.axis('off')
+    
+    # Create animation with optimized parameters
     anim = animation.FuncAnimation(
         fig,
         update,
-        frames=len(status_history),
-        interval=200,  # Slightly slower for better GIF viewing
+        init_func=init,
+        frames=len(frame_data),
+        interval=100,
+        blit=True,
         repeat=True
     )
+    
+    plt.ion()  # Turn interactive mode back on
     return anim 
