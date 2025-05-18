@@ -26,7 +26,8 @@
     Muhammad Sohaib Akhtar \\ \small CMS ID: 456318 \\
     Nosherwan Tahir \\ \small CMS ID: 456122
 }
-\institute{National University of Computer and Emerging Sciences}
+\institute[DAA]{NUST \\ \large Design and Analysis of Algorithms (DAA)}
+
 \date{\today}
 
 \begin{document}
