@@ -6,6 +6,7 @@ import numpy as np
 from simulation.sihrd_model import Status
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from typing import List, Dict, Any
 
 def animate_sihrd_timeline(timeline):
     """Create an animated visualization of the SIHRD timeline."""
@@ -204,7 +205,7 @@ def create_static_network(G):
     # Draw edges first
     nx.draw_networkx_edges(
         G, pos,
-        alpha=0.2,
+        alpha=0.2, 
         width=0.2,
         edge_color='gray'
     )
@@ -342,4 +343,151 @@ def animate_spread(G, status_history):
     )
     
     plt.ion()  # Turn interactive mode back on
-    return anim 
+    return anim
+
+def create_network_plot(G: nx.Graph, pos: Dict[int, List[float]], node_colors: List[str]) -> go.Figure:
+    """Create an interactive network plot using Plotly."""
+    edge_x = []
+    edge_y = []
+    for edge in G.edges():
+        x0, y0 = pos[edge[0]]
+        x1, y1 = pos[edge[1]]
+        edge_x.extend([x0, x1, None])
+        edge_y.extend([y0, y1, None])
+
+    edge_trace = go.Scatter(
+        x=edge_x, y=edge_y,
+        line=dict(width=0.5, color='#888'),
+        hoverinfo='none',
+        mode='lines')
+
+    node_x = []
+    node_y = []
+    for node in G.nodes():
+        x, y = pos[node]
+        node_x.append(x)
+        node_y.append(y)
+
+    node_trace = go.Scatter(
+        x=node_x, y=node_y,
+        mode='markers',
+        hoverinfo='text',
+        marker=dict(
+            showscale=True,
+            colorscale='YlGnBu',
+            size=10,
+            colorbar=dict(
+                thickness=15,
+                title='Node Connections',
+                xanchor='left',
+                titleside='right'
+            )
+        ))
+
+    fig = go.Figure(data=[edge_trace, node_trace],
+                   layout=go.Layout(
+                       title='Network Graph',
+                       showlegend=False,
+                       hovermode='closest',
+                       margin=dict(b=20, l=5, r=5, t=40),
+                       xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                       yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
+                   )
+    return fig
+
+def plot_sihrd_timeline(timeline: Dict[str, List[float]]) -> go.Figure:
+    """Create an interactive timeline plot of SIHRD model."""
+    days = range(len(timeline['susceptible']))
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=days, y=timeline['susceptible'], name='Susceptible',
+                            line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=days, y=timeline['infected'], name='Infected',
+                            line=dict(color='red')))
+    fig.add_trace(go.Scatter(x=days, y=timeline['hospitalized'], name='Hospitalized',
+                            line=dict(color='orange')))
+    fig.add_trace(go.Scatter(x=days, y=timeline['recovered'], name='Recovered',
+                            line=dict(color='green')))
+    fig.add_trace(go.Scatter(x=days, y=timeline['deceased'], name='Deceased',
+                            line=dict(color='gray')))
+
+    fig.update_layout(
+        title='Disease Spread Timeline',
+        xaxis_title='Days',
+        yaxis_title='Population',
+        hovermode='x unified'
+    )
+    return fig
+
+def create_age_distribution_plot(age_distribution: Dict[str, float]) -> go.Figure:
+    """Create an interactive bar plot of age distribution."""
+    fig = go.Figure(data=[
+        go.Bar(
+            x=list(age_distribution.keys()),
+            y=list(age_distribution.values()),
+            marker_color='lightblue'
+        )
+    ])
+    
+    fig.update_layout(
+        title='Age Distribution',
+        xaxis_title='Age Group',
+        yaxis_title='Percentage',
+        showlegend=False
+    )
+    return fig
+
+def animate_spread(G: nx.Graph, pos: Dict[int, List[float]], 
+                  timeline: Dict[str, List[float]], frames: int = 100) -> go.Figure:
+    """Create an animated visualization of disease spread."""
+    frames_list = []
+    for i in range(frames):
+        frame_data = []
+        for node in G.nodes():
+            status = 'susceptible'  # Default status
+            if i < len(timeline['infected']) and node < len(timeline['infected']):
+                if timeline['infected'][i][node] > 0:
+                    status = 'infected'
+                elif timeline['recovered'][i][node] > 0:
+                    status = 'recovered'
+                elif timeline['deceased'][i][node] > 0:
+                    status = 'deceased'
+            
+            color = {
+                'susceptible': 'blue',
+                'infected': 'red',
+                'recovered': 'green',
+                'deceased': 'gray'
+            }[status]
+            
+            frame_data.append(go.Scatter(
+                x=[pos[node][0]],
+                y=[pos[node][1]],
+                mode='markers',
+                marker=dict(size=10, color=color),
+                name=status
+            ))
+        
+        frames_list.append(go.Frame(data=frame_data, name=f'frame{i}'))
+    
+    fig = go.Figure(
+        data=frames_list[0].data,
+        frames=frames_list,
+        layout=go.Layout(
+            title='Disease Spread Animation',
+            showlegend=True,
+            updatemenus=[{
+                'type': 'buttons',
+                'showactive': False,
+                'buttons': [
+                    {
+                        'label': 'Play',
+                        'method': 'animate',
+                        'args': [None, {'frame': {'duration': 100, 'redraw': True},
+                                      'fromcurrent': True}]
+                    }
+                ]
+            }]
+        )
+    )
+    return fig 

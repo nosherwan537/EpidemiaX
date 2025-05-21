@@ -1,0 +1,24 @@
+{
+  "name": "epidemiax",
+  "version": "1.0.0",
+  "description": "Disease Spread Simulation Application",
+  "scripts": {
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && uvicorn main:app --reload",
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\""
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@mantine/core": "^8.0.1",
+    "@mantine/hooks": "^8.0.1",
+    "@mantine/notifications": "^8.0.1",
+    "@types/react-plotly.js": "^2.6.3",
+    "plotly.js-dist-min": "^3.0.1",
+    "react-plotly.js": "^2.6.0"
+  }
+}

@@ -8,7 +8,7 @@ class Status(Enum):
     INFECTED = 1
     HOSPITALIZED = 2
     RECOVERED = 3
-    DECEASED = 4
+    DECEASED = 4 
 
 def initialize_population(G, percent_infected=0.01, preserve_attributes=False):
     """Initialize the population with various attributes."""

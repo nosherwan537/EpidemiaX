@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 def main():
     # Step 1: Generate social network
     print("Generating social network...")
-    G = generate_social_network(n=500, avg_degree=10)
+    G = generate_social_network(num_nodes=500, edges_per_node=10)
     save_network(G)
 
     # Step 2: Initialize population with enhanced attributes
